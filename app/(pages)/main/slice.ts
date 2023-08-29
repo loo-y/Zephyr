@@ -3,7 +3,8 @@ import type { AppState, AppThunk } from '@/app/store'
 import * as API from '@/app/shared/API'
 import { fetchCount } from '@/app/shared/API'
 import { MainState } from './interface'
-import _ from 'lodash'
+// import _ from 'lodash' // use specific function from lodash
+import { map as _map } from 'lodash'
 import type { AsyncThunk } from '@reduxjs/toolkit'
 
 // define a queue to store api request
