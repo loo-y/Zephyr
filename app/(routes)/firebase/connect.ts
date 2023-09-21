@@ -3,6 +3,7 @@ import { getFirestore, Timestamp, FieldValue, Filter } from 'firebase-admin/fire
 import firebaseAdmin from 'firebase-admin'
 import fs from 'fs'
 import path from 'path'
+import _ from 'lodash'
 import * as dotenv from 'dotenv'
 dotenv.config()
 
@@ -26,12 +27,15 @@ const zephyrStoreDB = initializeFirebaseDB()
 const zephyrStoreDBName = `zephyr-store`
 const collectionName = `poems`
 
-export const getZephyrPoem = async () => {
-    const poemsCollection = await zephyrStoreDB.collection(collectionName)
+export const getZephyrPoems = async () => {
+    const poemsCollection = zephyrStoreDB.collection(collectionName)
 
-    const x = await poemsCollection.get()
+    const docList = await poemsCollection.get()
     let poems: any[] = []
-    x.forEach(doc => {
+
+    console.log(`docList`, docList.forEach)
+
+    docList.forEach(doc => {
         const v = doc.data()
         console.log(`v===>`, v)
         poems.push(v)
@@ -49,4 +53,27 @@ export const getZephyrPoem = async () => {
     //   }
 
     return poems
+}
+
+export const updateZephyrPoems = async () => {
+    const poemsCollection = zephyrStoreDB.collection(collectionName)
+
+    const batch = zephyrStoreDB.batch()
+
+    const testList = [
+        {
+            author: '11122',
+        },
+        {
+            author: '3333',
+        },
+    ]
+
+    _.map(testList, t => {
+        batch.create(poemsCollection.doc(), t)
+    })
+
+    await batch.commit()
+
+    return await getZephyrPoems()
 }
