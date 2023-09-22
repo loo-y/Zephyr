@@ -5,6 +5,7 @@ import fs from 'fs'
 import path from 'path'
 import _ from 'lodash'
 import * as dotenv from 'dotenv'
+import { IGetPoemsProps } from '../../shared/interface'
 dotenv.config()
 
 declare global {
@@ -27,12 +28,12 @@ const zephyrStoreDB = initializeFirebaseDB()
 const zephyrStoreDBName = `zephyr-store`
 const collectionName = `poems`
 
-export const getZephyrPoems = async () => {
+export const getZephyrPoems = async ({ author }: IGetPoemsProps = {}) => {
     const poemsCollection = zephyrStoreDB.collection(collectionName)
 
     let poems: any[] = []
 
-    // const docList = await poemsCollection.where('title', '==', `贈奚道士`).get()
+    // const docList = await poemsCollection.where('author', '==', `author).get()
 
     // docList.forEach(doc => {
     //     const v = doc.data()

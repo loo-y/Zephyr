@@ -1,11 +1,13 @@
 import { createAsyncThunk, createSlice, original, PayloadAction } from '@reduxjs/toolkit'
 import type { AppState, AppThunk } from '@/app/store'
 import * as API from '@/app/shared/API'
-import { fetchCount } from '@/app/shared/API'
+import { fetchPoems } from '@/app/shared/API'
 import { MainState } from './interface'
+import { IGetPoemsProps } from '@/app/shared/interface'
 // import _ from 'lodash' // use specific function from lodash
 import { map as _map } from 'lodash'
 import type { AsyncThunk } from '@reduxjs/toolkit'
+import _ from 'lodash'
 
 // define a queue to store api request
 type APIFunc = (typeof API)[keyof typeof API]
@@ -71,16 +73,16 @@ const makeApiRequestInQueue = createAsyncThunk(
     }
 )
 
-export const setCount = createAsyncThunk(
-    'mainSlice/getCount',
-    async (params: { count: number }, { dispatch, getState }: any) => {
+export const getPoems = createAsyncThunk(
+    'mainSlice/getPoems',
+    async (params: IGetPoemsProps = {}, { dispatch, getState }: any) => {
         const mainState: MainState = getMainState(getState())
         dispatch(
             makeApiRequestInQueue({
-                apiRequest: fetchCount.bind(null, {
-                    count: params.count,
+                apiRequest: fetchPoems.bind(null, {
+                    ...params,
                 }),
-                asyncThunk: setCount,
+                asyncThunk: getPoems,
             })
         )
     }
@@ -98,10 +100,10 @@ export const mainSlice = createSlice({
         },
     },
     extraReducers: builder => {
-        builder.addCase(setCount.fulfilled, (state, action) => {
+        builder.addCase(getPoems.fulfilled, (state, action) => {
             if (action.payload as any) {
-                const { status, count } = (action.payload as any) || {}
-                state.count = count
+                const { status, data } = (action.payload as any) || {}
+                state.poems = (status && !_.isEmpty(data?.poems) && data.poems) || []
             } else {
                 return { ...state }
             }

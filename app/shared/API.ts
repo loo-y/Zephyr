@@ -1,4 +1,5 @@
-import { AnyObj } from './interface'
+import { AnyObj, IGetPoemsProps } from './interface'
+import _ from 'lodash'
 
 const commonOptions = {
     method: 'POST',
@@ -17,4 +18,31 @@ export const fetchCount = async ({ count }: { count: number }) => {
         throw new Error(response.statusText)
     }
     return await response.json()
+}
+
+export const fetchPoems = async (params: IGetPoemsProps) => {
+    let data = null,
+        status = false
+    try {
+        const response = await fetch('/api/poems', {
+            ...commonOptions,
+            body: JSON.stringify({ ...params }),
+        })
+        if (!response.ok) {
+            // throw new Error(response.statusText)
+            return {
+                status,
+                data,
+            }
+        }
+        data = await response.json()
+        status = true
+    } catch (e) {
+        console.log(`fetchPoems`, e)
+    }
+
+    return {
+        data,
+        status,
+    }
 }
