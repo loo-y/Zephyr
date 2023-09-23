@@ -1,4 +1,4 @@
-import { initializeApp } from 'firebase/app'
+import { FirebaseApp, initializeApp, getApps, getApp } from 'firebase/app'
 import {
     getFirestore,
     collection,
@@ -12,6 +12,9 @@ import {
     startAt,
     getDocs,
     Firestore,
+    persistentLocalCache,
+    initializeFirestore,
+    persistentSingleTabManager,
 } from 'firebase/firestore'
 // import { getAnalytics } from "firebase/analytics";
 
@@ -24,6 +27,7 @@ dotenv.config()
 declare global {
     var poemsCollection: CollectionReference<DocumentData, DocumentData>
     var zephyrStoreDB: Firestore
+    var zephyrApp: FirebaseApp
 }
 
 const {
@@ -55,11 +59,12 @@ const getPoemsCollection = () => {
     const app = initializeApp(firebaseConfig)
     // const analytics = getAnalytics(app);
     const zephyrStoreDB = getFirestore(app)
-    global.poemsCollection = collection(zephyrStoreDB, 'poems')
-    return global.poemsCollection
+    const poemsCollection = collection(zephyrStoreDB, 'poems')
+    global.poemsCollection = poemsCollection
+    return poemsCollection
 }
 
-const getzephyrStoreDB = () => {
+const getZephyrStoreDB = () => {
     if (global.zephyrStoreDB) {
         console.log(`global.zephyrStoreDB is existed`)
         return global.zephyrStoreDB
@@ -69,16 +74,34 @@ const getzephyrStoreDB = () => {
     // const analytics = getAnalytics(app);
     const zephyrStoreDB = getFirestore(app)
     global.zephyrStoreDB = zephyrStoreDB
-    return global.zephyrStoreDB
+    return zephyrStoreDB
 }
 
+const getZephyrApp = () => {
+    if (global.zephyrApp) {
+        console.log(`global.zephyrApp`, getApps().length)
+        return getApp(global.zephyrApp.name)
+        // return global.zephyrApp;
+    }
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig, 'zephyrApp')
+    // initializeFirestore(app, {localCache: persistentLocalCache({})});
+    global.zephyrApp = app
+    console.log(`new app init`, getApp(`zephyrApp`), getApps().length)
+    return app
+}
 export const getZephyrPoems = async ({ author }: IGetPoemsProps = {}) => {
     let poems: any[] = []
-    const poemsCollection = getPoemsCollection()
-    const q = query(poemsCollection, where('id', '==', '92fcaa7f-5bd9-4f03-a74b-3e0bb40ffb41'))
+    // const poemsCollection = getPoemsCollection()
+    // const zephyrStoreDB = getZephyrStoreDB()
+
+    const zephyrApp = getZephyrApp()
+    const zephyrStoreDB = getFirestore(zephyrApp)
+    const poemsCollection = collection(zephyrStoreDB, 'poems')
+    const errorID = `testid`
+    const correctID = `92fcaa7f-5bd9-4f03-a74b-3e0bb40ffb41`
+    const q = query(poemsCollection, where('id', '==', errorID))
     const querySnapshot = await getDocs(q)
-    console.log(`get querySnapshot`)
-    console.log(querySnapshot)
     querySnapshot.forEach(doc => {
         const v = doc.data()
         console.log(doc.id, ' => ', v)
