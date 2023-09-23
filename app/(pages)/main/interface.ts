@@ -13,3 +13,8 @@ export type PoemItem = {
     prologue?: string
     type?: POEM_TYPE
 }
+
+export type PeomPrgph = {
+    content: string
+    isHide?: boolean
+}
