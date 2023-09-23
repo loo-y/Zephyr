@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getZephyrPoems } from '../../firebase/connect'
+import { getZephyrPoems } from '../../firebase/connect-temp'
 
 export async function GET(request: NextRequest) {
     // const resultJson = await chat()
-    const isSet = request.nextUrl.searchParams.get('set') == '1'
-    let poems = await getZephyrPoems()
+    const author = request.nextUrl.searchParams.get('author') || ''
+    let poems = await getZephyrPoems({ author })
 
     const response = NextResponse.json({ poems })
     response.headers.set('Access-Control-Allow-Origin', '*')
