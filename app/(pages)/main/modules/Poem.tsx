@@ -1,16 +1,18 @@
 'use client'
 import { useAppSelector, useAppDispatch } from '@/app/hooks'
 import { getPoems, getMainState } from '../slice'
-import { useEffect, useState, FormEvent, useRef } from 'react'
-import { PoemItem, PeomPrgph } from '../interface'
+import { useEffect, useState, FormEvent, useRef, MutableRefObject } from 'react'
+import { PoemItem, PeomPrgph, SingleText } from '../interface'
 import _ from 'lodash'
+import { traditionalToSimplified } from '@/app/shared/util'
 
 export default () => {
     const dispatch = useAppDispatch()
     const state = useAppSelector(getMainState)
     const { poems } = state || {}
     const [poem, setPoem] = useState<PoemItem | null>(null)
-    const [peomPrgphList, setPomPrgphList] = useState<PeomPrgph[]>([])
+    const [poemPrgphList, setPoemPrgphList] = useState<PeomPrgph[]>([])
+    const inputRefs = useRef([])
     useEffect(() => {
         const poems = dispatch(getPoems())
     }, [])
@@ -19,26 +21,37 @@ export default () => {
         if (poems?.[0]) {
             setPoem(poems[0])
             const { paragraphs } = poems[0]
-            setPomPrgphList(
-                _.map(paragraphs.join('').match(/([^,，。]+[,，。]{1})/g) || [], p => {
-                    return {
-                        content: p,
-                        isHide: Math.random() > 0.5,
-                    }
-                })
-            )
+            let hideLength = 0
+            let newPoemPgrhList = _.map(paragraphs.join('').match(/([^,，。]+[,，。]{1})/g) || [], (p, index) => {
+                const isHide = Math.random() > 0.5
+                if (isHide) hideLength++
+                return {
+                    content: traditionalToSimplified(p),
+                    isHide,
+                }
+            })
+
+            if (hideLength > 0 && hideLength == newPoemPgrhList.length) {
+                newPoemPgrhList[0] = {
+                    ...newPoemPgrhList[0],
+                    isHide: false,
+                }
+            }
+            setPoemPrgphList(newPoemPgrhList)
         }
         // listenForChineseInput()
     }, [poems])
-    console.log(`state`, state)
+
     return (
-        <div className="poem flex  mx-auto w-fit absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-3/4">
-            <div className="flex-col flex justify-center items-center">
-                {_.map(peomPrgphList, (paragraph, index) => {
+        <div className="poem flex flex-col gap-1 mx-auto w-fit absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-3/4 text-slate-500">
+            <div className="title flex items-center w-full justify-center pr-6 mb-3 text-xl">{poem?.title}</div>
+            <div className="author flex items-center w-full justify-end pr-3 mb-3 text-sm">-- {poem?.author}</div>
+            <div className="flex-col flex justify-center items-center gap-2">
+                {_.map(poemPrgphList, (paragraph, index) => {
                     const { isHide, content } = paragraph || {}
                     console.log(paragraph)
 
-                    return <ParagraphInput key={`paragraph_${index}`} peomPrgph={paragraph} />
+                    return <ParagraphInput key={`paragraph_${index}`} peomPrgph={paragraph} inputRefs={inputRefs} />
 
                     // return <span key={`paragraph_${index}`}>{content}</span>
                 })}
@@ -47,11 +60,10 @@ export default () => {
     )
 }
 
-const ParagraphInput = ({ peomPrgph }: { peomPrgph: PeomPrgph }) => {
+const ParagraphInput = ({ peomPrgph, inputRefs }: { peomPrgph: PeomPrgph; inputRefs: MutableRefObject<never[]> }) => {
     const { isHide, content } = peomPrgph || {}
 
-    const [texts, setTexts] = useState<{ value: string; inputValue: string }[]>([])
-    const inputRefs = useRef([])
+    const [texts, setTexts] = useState<SingleText[]>([])
 
     useEffect(() => {
         if (content) {
@@ -68,18 +80,72 @@ const ParagraphInput = ({ peomPrgph }: { peomPrgph: PeomPrgph }) => {
         }
     }, [content])
 
-    const handleInput = (event: FormEvent<HTMLInputElement>) => {
-        console.log(`handleInput`, event?.target)
+    const handleInput = (event: FormEvent<HTMLInputElement>, texts: SingleText[], currentTextIndex: number) => {
         const theInput = event.target as HTMLInputElement
-        inputRefs.current.forEach((el, index) => {
-            if (el == theInput) {
-                console.log(`intRefs`, theInput, inputRefs.current.length, index)
-            }
+        const value = theInput.value
+        const currentText = texts[currentTextIndex]
+        const totalTextsLength = texts.length
+        const valueLength = value.length
+        const curentRefIndex = _.findIndex(inputRefs.current, (el: any) => {
+            return el == theInput
         })
+        if (valueLength > 0 && value[0] == currentText.value) {
+            _.each(value, (v, index) => {
+                if (index > 0) {
+                    const nextText = texts[currentTextIndex + index]
+                    if (nextText) {
+                        if (nextText?.value == v) {
+                            // @ts-ignore
+                            inputRefs.current[curentRefIndex + index].value = v
+                            if (index == valueLength - 1) {
+                                // last one
+                                // @ts-ignore
+                                inputRefs.current[curentRefIndex + index + 1]?.focus()
+                            }
+                        } else {
+                            // @ts-ignore
+                            inputRefs.current[curentRefIndex + index].focus()
+                            return false // break;
+                        }
+                    }
+                } else {
+                    // @ts-ignore
+                    inputRefs.current[curentRefIndex].value = value[0]
+                    // @ts-ignore
+                    inputRefs.current[curentRefIndex + 1]?.focus()
+                }
+            })
+            ;(inputRefs.current[curentRefIndex] as HTMLInputElement).style.borderColor = ''
+            ;(inputRefs.current[curentRefIndex] as HTMLInputElement).style.color = ''
+        } else if (/[\u4e00-\u9fff\u{20000}-\u{2fa1f}]/u.test(value)) {
+            // @ts-ignore
+            inputRefs.current[curentRefIndex].value = value[0]
+            ;(inputRefs.current[curentRefIndex] as HTMLInputElement).style.borderColor = 'rgb(239 68 68)'
+            ;(inputRefs.current[curentRefIndex] as HTMLInputElement).style.color = 'rgb(239 68 68)'
+        }
+    }
+
+    const handleKeydown = (event: FormEvent<HTMLInputElement>) => {
+        const deleteKeyCode = 8 // Backspace 键的键码为 8
+        const theInput = event.target as HTMLInputElement
+        // @ts-ignore
+        if (event.keyCode === deleteKeyCode) {
+            const curentRefIndex = _.findIndex(inputRefs.current, (el: any) => {
+                return el == theInput
+            })
+            ;(inputRefs.current[curentRefIndex] as HTMLInputElement).style.borderColor = ''
+            ;(inputRefs.current[curentRefIndex] as HTMLInputElement).style.color = ''
+
+            if (theInput.value?.length < 1) {
+                setTimeout(() => {
+                    // @ts-ignore
+                    inputRefs.current[curentRefIndex - 1]?.focus()
+                }, 10)
+            }
+        }
     }
 
     if (!content) return null
-    console.log(`inputRefs.current.length`, inputRefs.current.length)
     return (
         <div className="flex flex-row gap-[0.125rem]">
             {_.map(texts, (t, tIndex) => {
@@ -95,10 +161,11 @@ const ParagraphInput = ({ peomPrgph }: { peomPrgph: PeomPrgph }) => {
                     <input
                         type="text"
                         ref={element => inputRefs.current.push(element as never)}
-                        onInput={handleInput}
+                        onInput={e => handleInput(e, texts, tIndex)}
+                        onKeyDown={handleKeydown}
                         autoComplete={'nope'}
                         key={`paragraphinput_${tIndex}`}
-                        className=" w-5 content-center text-center outline-none bg-transparent inline border-b border-indigo-300"
+                        className={` w-5 content-center text-center outline-none bg-transparent inline border-b border-gray-500 `}
                     ></input>
                 )
             })}

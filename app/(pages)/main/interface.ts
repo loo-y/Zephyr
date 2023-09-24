@@ -18,3 +18,8 @@ export type PeomPrgph = {
     content: string
     isHide?: boolean
 }
+
+export type SingleText = {
+    value: string
+    inputValue?: string
+}
